@@ -1,0 +1,15 @@
+node_modules/
+out/
+release/
+prisma/dev.db
+prisma/dev.db-journal
+.env
+*.tsbuildinfo
+
+# PlatformIO (ESP32)
+src/mcu/.pio/
+src/mcu/.vscode/
+src/mcu/.clang_complete
+src/mcu/.gdbinit
+src/mcu/.gdbinit_history
+
