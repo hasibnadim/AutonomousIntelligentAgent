@@ -23,7 +23,8 @@ export const prisma = new PrismaClient()
 
 export function registerDatabaseIpc() {
   ipcMain.handle('db:getWaypoints', async () => {
-    return prisma.waypoint.findMany({ where: { sessionId: 1 }, orderBy: { createdAt: 'asc' } })
+    try { return await prisma.waypoint.findMany({ where: { sessionId: 1 }, orderBy: { createdAt: 'asc' } }) }
+    catch { return [] }
   })
 
   ipcMain.handle('db:addWaypoint', async (_event, data: { lat: number; lng: number; label: string }) => {

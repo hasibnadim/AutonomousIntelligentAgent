@@ -10,14 +10,18 @@ export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null)
 
   const refresh = useCallback(async () => {
-    const [tel, cl, wp] = await Promise.all([
-      window.api.getTelemetry(),
-      window.api.getCommandLog(),
-      window.api.getWaypoints()
-    ])
-    setT(tel)
-    setLog(cl)
-    setWpts(wp)
+    try {
+      const tel = await window.api.getTelemetry()
+      setT(tel)
+    } catch { setT(null) }
+    try {
+      const cl = await window.api.getCommandLog()
+      setLog(cl)
+    } catch { setLog([]) }
+    try {
+      const wp = await window.api.getWaypoints()
+      setWpts(wp)
+    } catch { setWpts([]) }
   }, [])
 
   useEffect(() => {
