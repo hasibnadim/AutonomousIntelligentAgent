@@ -14,6 +14,11 @@ const api = {
   getTelemetry: () => ipcRenderer.invoke('vehicle:getTelemetry'),
   getStatus: () => ipcRenderer.invoke('vehicle:getStatus'),
   sendCommand: (cmd: string) => ipcRenderer.invoke('vehicle:sendCommand', cmd),
+  onVehicleLiveData: (cb: (data: any) => void) => {
+    const handler = (_event: any, data: any) => cb(data)
+    ipcRenderer.on('vehicle:liveData', handler)
+    return () => ipcRenderer.removeListener('vehicle:liveData', handler)
+  },
   getCommandLog: () => ipcRenderer.invoke('vehicle:getCommandLog'),
   getWaypoints: () => ipcRenderer.invoke('db:getWaypoints'),
   addWaypoint: (data: { lat: number; lng: number; label: string }) =>

@@ -11,7 +11,10 @@ export default function Home() {
   useEffect(() => {
     refresh()
     const iv = setInterval(refresh, 1200)
-    return () => clearInterval(iv)
+    const unsub = window.api.onVehicleLiveData((d: any) => {
+      setT((prev) => prev ? { ...prev, ...d } : d)
+    })
+    return () => { clearInterval(iv); unsub?.() }
   }, [refresh])
 
   if (!t) {
@@ -37,9 +40,25 @@ export default function Home() {
           <span className="text-[10px] font-mono tracking-wider" style={{ color: t.mode === 'autonomous' ? 'rgba(0,255,136,0.7)' : 'rgba(255,170,0,0.7)' }}>
             {t.mode === 'autonomous' ? '► AUTO' : '◉ MANUAL'}
           </span>
+          {t.navState && t.navState !== 'idle' && (
+            <>
+              <span className="text-[10px] font-mono" style={{ color: 'var(--accent-text-faint)' }}>|</span>
+              <span className="text-[10px] font-mono tracking-wider" style={{ color: 'rgba(0,240,255,0.7)' }}>
+                NAV: {t.navState.toUpperCase()}
+              </span>
+            </>
+          )}
         </div>
         <span className="text-[10px] font-mono animate-data-blink" style={{ color: 'var(--accent-text-faint)' }}>
           {new Date().toLocaleTimeString()} UTC
+        </span>
+      </div>
+
+      {/* ── Connection status ── */}
+      <div className="flex items-center gap-2 px-1" style={{ color: t.connected ? '#00ff88' : '#ff0044' }}>
+        <span className="h-1.5 w-1.5" style={{ background: 'currentColor', boxShadow: `0 0 6px currentColor` }} />
+        <span className="text-[10px] font-mono tracking-widest">
+          {t.connected ? `LINK ESTABLISHED ${t.lastSeen ? new Date(t.lastSeen).toLocaleTimeString() : ''}` : 'NO LINK — ESP32 OFFLINE'}
         </span>
       </div>
 
@@ -54,7 +73,7 @@ export default function Home() {
             <SensorTile
               label="Temperature"
               value={`${t.temperature.toFixed(1)}°C`}
-              bars={35}
+              bars={t.temperature}
               max={60}
               color={t.temperature > 45 ? '#ff0044' : t.temperature > 38 ? '#ffaa00' : '#00ff88'}
               icon="⟐"
@@ -69,11 +88,19 @@ export default function Home() {
               alert={t.flameDetected}
             />
             <SensorTile
-              label="Ultrasonic"
-              value={`${t.ultrasonicDistance.toFixed(0)} cm`}
-              bars={Math.max(0, 180 - t.ultrasonicDistance)}
+              label="Ultrasonic L"
+              value={`${t.ultrasonicLeft.toFixed(0)} cm`}
+              bars={Math.max(0, 180 - t.ultrasonicLeft)}
               max={180}
-              color={t.ultrasonicDistance < 30 ? '#ff0044' : t.ultrasonicDistance < 60 ? '#ffaa00' : '#00ff88'}
+              color={t.ultrasonicLeft < 30 ? '#ff0044' : t.ultrasonicLeft < 60 ? '#ffaa00' : '#00ff88'}
+              icon="⟐"
+            />
+            <SensorTile
+              label="Ultrasonic R"
+              value={`${t.ultrasonicRight.toFixed(0)} cm`}
+              bars={Math.max(0, 180 - t.ultrasonicRight)}
+              max={180}
+              color={t.ultrasonicRight < 30 ? '#ff0044' : t.ultrasonicRight < 60 ? '#ffaa00' : '#00ff88'}
               icon="⟐"
             />
           </div>
@@ -88,10 +115,10 @@ export default function Home() {
               <span className="hud-title">Vehicle Telemetry</span>
             </div>
             <div className="p-4 grid grid-cols-2 gap-3">
-              <HUDTile label="Speed" value={`${t.speed.toFixed(2)}`} unit="m/s" color={t.speed > 0 ? '#00ff88' : 'var(--accent-text-muted)'} />
+              <HUDTile label="Speed" value={`${t.speed}`} unit="PWM" color={t.speed > 0 ? '#00ff88' : 'var(--accent-text-muted)'} />
               <HUDTile label="Battery" value={`${t.batteryLevel.toFixed(0)}%`} unit={`${t.batteryVoltage.toFixed(1)}V`} color={t.batteryLevel > 50 ? '#00ff88' : t.batteryLevel > 20 ? '#ffaa00' : '#ff0044'} />
               <HUDTile label="Heading" value={`${t.heading.toFixed(0)}°`} unit={degStr(t.heading)} color="var(--accent)" />
-              <HUDTile label="Altitude" value={`${t.altitude.toFixed(0)}`} unit="m" color="var(--accent)" />
+              <HUDTile label="Position" value={`${t.posX.toFixed(1)},${t.posY.toFixed(1)}`} unit="cm" color="var(--accent)" />
             </div>
             <span className="corner-bl">└</span>
             <span className="corner-br">┘</span>
@@ -106,11 +133,13 @@ export default function Home() {
       <div className="grid grid-cols-2 gap-4">
         <div className="hud-panel p-0">
           <div className="px-4 py-2.5" style={{ borderBottom: '1px solid var(--accent-border)' }}>
-            <span className="hud-title">GPS Coordinates</span>
+            <span className="hud-title">Coordinates</span>
           </div>
           <div className="p-4 grid grid-cols-2 gap-3">
-            <HUDTile label="Latitude" value={t.latitude.toFixed(6)} unit="°N" color="var(--accent)" />
-            <HUDTile label="Longitude" value={t.longitude.toFixed(6)} unit="°E" color="var(--accent)" />
+            <HUDTile label="X" value={t.posX.toFixed(1)} unit="cm" color="var(--accent)" />
+            <HUDTile label="Y" value={t.posY.toFixed(1)} unit="cm" color="var(--accent)" />
+            <HUDTile label="Latitude" value={t.latitude.toFixed(6)} unit="°N" color="var(--accent-text-dim)" />
+            <HUDTile label="Longitude" value={t.longitude.toFixed(6)} unit="°E" color="var(--accent-text-dim)" />
           </div>
           <span className="corner-bl">└</span>
           <span className="corner-br">┘</span>
@@ -170,7 +199,7 @@ function HUDTile({ label, value, unit, color }: { label: string; value: string; 
 function Radar({ telemetry: t }: { telemetry: Telemetry }) {
   const cx = 90, cy = 90, maxR = 85, maxRange = 180
   const a = (t.heading - 90) * Math.PI / 180
-  const d = Math.min(t.ultrasonicDistance, maxRange)
+  const d = Math.min(Math.min(t.ultrasonicLeft, t.ultrasonicRight), maxRange)
   const bx = cx + (d / maxRange) * maxR * Math.cos(a)
   const by = cy + (d / maxRange) * maxR * Math.sin(a)
   const hx = cx + maxR * Math.cos(a)
@@ -200,22 +229,17 @@ function Radar({ telemetry: t }: { telemetry: Telemetry }) {
           <line x1="27" y1="27" x2="153" y2="153" stroke="rgba(0,240,255,0.04)" strokeWidth="0.3" />
           <line x1="153" y1="27" x2="27" y2="153" stroke="rgba(0,240,255,0.04)" strokeWidth="0.3" />
 
-          {/* Sweep */}
           <g className="radar-sweep">
             <polygon points={`${cx},${cy} ${cx},5 ${cx + maxR},${cy}`} fill="rgba(0,240,255,0.04)" />
             <line x1={cx} y1={cy} x2={cx} y2="5" stroke="rgba(0,240,255,0.2)" strokeWidth="1" />
           </g>
 
-          {/* Sensor cone */}
           <path d={`M${cx},${cy} L${c1x},${c1y} A${maxR},${maxR} 0 0,1 ${c2x},${c2y} Z`} fill="rgba(0,240,255,0.03)" />
 
-          {/* Heading line */}
           <line x1={cx} y1={cy} x2={hx} y2={hy} stroke="rgba(0,240,255,0.2)" strokeWidth="0.5" strokeDasharray="3 3" />
 
-          {/* Sensor beam */}
           <line x1={cx} y1={cy} x2={bx} y2={by} stroke={color} strokeWidth="1" opacity="0.4" />
 
-          {/* Blip at detected distance */}
           <circle cx={bx} cy={by} r="3" fill={color} opacity="0.9">
             <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1.5s" repeatCount="indefinite" />
           </circle>
@@ -224,7 +248,6 @@ function Radar({ telemetry: t }: { telemetry: Telemetry }) {
             <animate attributeName="opacity" values="0.4;0;0.4" dur="1.5s" repeatCount="indefinite" />
           </circle>
 
-          {/* Center dot */}
           <circle cx={cx} cy={cy} r="2" fill="var(--accent)" opacity="0.8" />
 
           <text x={cx} y="177" textAnchor="middle" fill="var(--accent-text-very-dim)" fontSize="8" fontFamily="monospace">

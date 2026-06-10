@@ -1,19 +1,32 @@
+export interface Obstacle {
+  a: number
+  d: number
+}
+
 export interface Telemetry {
   speed: number
   batteryLevel: number
   batteryVoltage: number
   temperature: number
   flameDetected: boolean
-  ultrasonicDistance: number
+  ultrasonicLeft: number
+  ultrasonicRight: number
   heading: number
   latitude: number
   longitude: number
   altitude: number
   status: string
   mode: string
+  navState: string
   targetLat: number
   targetLng: number
   wifiSignal: number
+  connected: boolean
+  lastSeen: number | null
+  posX: number
+  posY: number
+  posH: number
+  obstacles: Obstacle[]
 }
 
 export interface CommandLog {
