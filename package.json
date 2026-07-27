@@ -1,21 +1,22 @@
 {
   "name": "electron-app",
   "version": "1.0.0",
-  "description": "Electron app with TypeScript, React, TailwindCSS, React Router, SQLite, Prisma",
+  "description": "Electron app with TypeScript, React, TailwindCSS, React Router, SQLite, Prisma — Admin & User CRUD",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "dist": "electron-vite build && electron-builder --win",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "node node_modules/electron/install.js && electron-builder install-app-deps",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
+    "prisma:seed": "bun prisma/seed.ts",
     "prisma:studio": "prisma studio"
   },
   "build": {
-    "appId": "com.vehicle.dashboard",
-    "productName": "AGV Dashboard",
+    "appId": "com.user.admin",
+    "productName": "User Admin",
     "directories": {
       "output": "release"
     },
@@ -44,13 +45,15 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "AGV Dashboard"
+      "shortcutName": "User Admin"
     }
   },
   "dependencies": {
-    "@prisma/client": "^6.6.0"
+    "@prisma/client": "^6.6.0",
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",

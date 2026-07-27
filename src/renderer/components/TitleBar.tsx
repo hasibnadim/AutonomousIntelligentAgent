@@ -3,22 +3,11 @@ import { useTheme } from '../ThemeContext'
 
 export default function TitleBar() {
   const [maximized, setMaximized] = useState(false)
-  const [wifi, setWifi] = useState(-45)
   const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     window.api.window.isMaximized().then(setMaximized)
     window.api.window.onMaximized(setMaximized)
-  }, [])
-
-  useEffect(() => {
-    const iv = setInterval(async () => {
-      try {
-        const t = await window.api.getStatus()
-        setWifi(t.wifiSignal)
-      } catch {}
-    }, 2000)
-    return () => clearInterval(iv)
   }, [])
 
   return (
@@ -33,34 +22,11 @@ export default function TitleBar() {
       <div className="flex items-center gap-3">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 4px var(--accent-glow))' }}>
           <circle cx="12" cy="12" r="10" />
-          <circle cx="12" cy="12" r="4" />
-          <line x1="12" y1="2" x2="12" y2="6" />
-          <line x1="12" y1="18" x2="12" y2="22" />
-          <line x1="2" y1="12" x2="6" y2="12" />
-          <line x1="18" y1="12" x2="22" y2="12" />
+          <path d="M12 12a4 4 0 1 0-4-4" />
+          <path d="M4 20c1.5-3 4-5 8-5s6.5 2 8 5" />
         </svg>
         <span className="text-sm font-mono font-semibold tracking-[3px]" style={{ color: 'var(--accent-text-bright)', textShadow: '0 0 8px var(--accent-text-very-dim)' }}>
-          AGV Control Panel
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1.5">
-          {[4, 3, 2, 1].map((i) => {
-            const active = wifi >= -40 ? i <= 4 : wifi >= -55 ? i <= 3 : wifi >= -70 ? i <= 2 : wifi >= -85 ? i <= 1 : i <= 0
-            return (
-              <span
-                key={i}
-                className="w-[2px] transition-all duration-500"
-                style={{
-                  height: `${4 + i * 3}px`,
-                  background: active ? 'var(--accent)' : 'var(--accent-border-subtle)',
-                  boxShadow: active ? '0 0 4px var(--accent-glow)' : 'none'
-                }}
-              />
-            )
-          })}
-          <span className="text-[9px] font-mono ml-1.5" style={{ color: 'var(--accent-text-muted)' }}>{wifi.toFixed(0)} dBm</span>
+          User Admin
         </span>
       </div>
 

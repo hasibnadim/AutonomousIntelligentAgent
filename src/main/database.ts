@@ -1,12 +1,12 @@
 import { PrismaClient } from '@prisma/client'
-import { ipcMain, app } from 'electron'
+import { app } from 'electron'
 import { join } from 'path'
 
 const dbPath = app.isPackaged
   ? join(process.resourcesPath, 'prisma', 'dev.db')
-  : join(__dirname, '..', '..', '..', 'prisma', 'dev.db')
+  : join(app.getAppPath(), 'prisma', 'dev.db')
 
-process.env.DATABASE_URL = `file:${dbPath}`
+process.env.DATABASE_URL = `file:${dbPath.replace(/\\/g, '/')}`
 
 if (app.isPackaged) {
   process.env.PRISMA_QUERY_ENGINE_LIBRARY = join(
@@ -21,25 +21,37 @@ if (app.isPackaged) {
 
 export const prisma = new PrismaClient()
 
-export function registerDatabaseIpc() {
-  ipcMain.handle('db:getWaypoints', async () => {
-    try { return await prisma.waypoint.findMany({ where: { sessionId: 1 }, orderBy: { createdAt: 'asc' } }) }
-    catch { return [] }
-  })
+export type BiometricStatus = 'SET' | 'GET'
 
-  ipcMain.handle('db:addWaypoint', async (_event, data: { lat: number; lng: number; label: string }) => {
-    return prisma.waypoint.create({ data: { sessionId: 1, ...data } })
-  })
+export type PublicUser = {
+  id: number
+  username: string | null
+  email: string | null
+  name: string
+  role: string
+  biometricStatus: BiometricStatus
+  createdAt: Date
+  updatedAt: Date
+}
 
-  ipcMain.handle('db:deleteWaypoint', async (_event, id: number) => {
-    return prisma.waypoint.delete({ where: { id } })
-  })
-
-  ipcMain.handle('db:getSessions', async () => {
-    return prisma.session.findMany({ orderBy: { startedAt: 'desc' } })
-  })
-
-  ipcMain.handle('db:getLogs', async (_event, sessionId: number) => {
-    return prisma.log.findMany({ where: { sessionId }, orderBy: { createdAt: 'desc' }, take: 50 })
-  })
+export function toPublicUser(user: {
+  id: number
+  username: string | null
+  email: string | null
+  name: string
+  role: string
+  biometricPattern?: string | null
+  createdAt: Date
+  updatedAt: Date
+}): PublicUser {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    biometricStatus: user.biometricPattern ? 'GET' : 'SET',
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  }
 }

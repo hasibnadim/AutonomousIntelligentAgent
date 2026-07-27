@@ -7,31 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Session {
-  id        Int      @id @default(autoincrement())
-  name      String
-  status    String   @default("idle")
-  startedAt DateTime @default(now())
-  endedAt   DateTime?
-  logs      Log[]
-  waypoints Waypoint[]
-}
-
-model Log {
-  id        Int      @id @default(autoincrement())
-  sessionId Int
-  session   Session  @relation(fields: [sessionId], references: [id])
-  type      String   @default("info")
-  message   String
-  createdAt DateTime @default(now())
-}
-
-model Waypoint {
-  id        Int      @id @default(autoincrement())
-  sessionId Int
-  session   Session  @relation(fields: [sessionId], references: [id])
-  lat       Float
-  lng       Float
-  label     String   @default("")
-  createdAt DateTime @default(now())
+model User {
+  id               Int      @id @default(autoincrement())
+  username         String?  @unique // required for ADMIN login only
+  email            String?  @unique
+  passwordHash     String?  // required for ADMIN login only
+  name             String   @default("")
+  role             String   @default("USER") // ADMIN | USER
+  biometricPattern String?  // hashed keypad pattern; null => SET mode
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

@@ -13,7 +13,7 @@ export function createWindow() {
     height: 900,
     minWidth: 960,
     minHeight: 600,
-    title: 'AGV Control Panel',
+    title: 'User Admin',
     backgroundColor: '#1a1a1a',
     titleBarStyle: 'hidden',
     titleBarOverlay: {

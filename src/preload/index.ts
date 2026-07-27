@@ -11,21 +11,53 @@ const api = {
       ipcRenderer.on('window:maximized', (_event, value) => cb(value))
     }
   },
-  getTelemetry: () => ipcRenderer.invoke('vehicle:getTelemetry'),
-  getStatus: () => ipcRenderer.invoke('vehicle:getStatus'),
-  sendCommand: (cmd: string) => ipcRenderer.invoke('vehicle:sendCommand', cmd),
-  onVehicleLiveData: (cb: (data: any) => void) => {
-    const handler = (_event: any, data: any) => cb(data)
-    ipcRenderer.on('vehicle:liveData', handler)
-    return () => ipcRenderer.removeListener('vehicle:liveData', handler)
+  auth: {
+    login: (data: { username: string; password: string }) =>
+      ipcRenderer.invoke('auth:login', data),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    me: () => ipcRenderer.invoke('auth:me')
   },
-  getCommandLog: () => ipcRenderer.invoke('vehicle:getCommandLog'),
-  getWaypoints: () => ipcRenderer.invoke('db:getWaypoints'),
-  addWaypoint: (data: { lat: number; lng: number; label: string }) =>
-    ipcRenderer.invoke('db:addWaypoint', data),
-  deleteWaypoint: (id: number) => ipcRenderer.invoke('db:deleteWaypoint', id),
-  getSessions: () => ipcRenderer.invoke('db:getSessions'),
-  getLogs: (sessionId: number) => ipcRenderer.invoke('db:getLogs', sessionId)
+  users: {
+    list: () => ipcRenderer.invoke('users:list'),
+    get: (id: number) => ipcRenderer.invoke('users:get', id),
+    create: (data: {
+      username?: string
+      email?: string
+      password?: string
+      name?: string
+      role?: string
+    }) => ipcRenderer.invoke('users:create', data),
+    update: (data: {
+      id: number
+      username?: string
+      email?: string
+      name?: string
+      role?: string
+      password?: string
+    }) => ipcRenderer.invoke('users:update', data),
+    delete: (id: number) => ipcRenderer.invoke('users:delete', id),
+    resetBiometric: (id: number) => ipcRenderer.invoke('users:resetBiometric', id)
+  },
+  esp: {
+    getStatus: () => ipcRenderer.invoke('esp:getStatus'),
+    getLogs: () => ipcRenderer.invoke('esp:getLogs'),
+    clearLogs: () => ipcRenderer.invoke('esp:clearLogs'),
+    onStatus: (cb: (status: any) => void) => {
+      const handler = (_event: any, status: any) => cb(status)
+      ipcRenderer.on('esp:status', handler)
+      return () => ipcRenderer.removeListener('esp:status', handler)
+    },
+    onLog: (cb: (entry: any) => void) => {
+      const handler = (_event: any, entry: any) => cb(entry)
+      ipcRenderer.on('esp:log', handler)
+      return () => ipcRenderer.removeListener('esp:log', handler)
+    },
+    onLogsCleared: (cb: () => void) => {
+      const handler = () => cb()
+      ipcRenderer.on('esp:logsCleared', handler)
+      return () => ipcRenderer.removeListener('esp:logsCleared', handler)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

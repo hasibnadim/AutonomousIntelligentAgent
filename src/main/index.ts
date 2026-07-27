@@ -1,21 +1,21 @@
 import { app, BrowserWindow } from 'electron'
 import { createWindow, registerWindowIpc } from './window'
-import { registerVehicleIpc } from './vehicle'
-import { registerDatabaseIpc, prisma } from './database'
-import { startTcpServer } from './tcp'
+import { prisma } from './database'
+import { registerAuthIpc, seedDefaultAdmin } from './auth'
+import { registerEspIpc, startEspSocketServer } from './espSocket'
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow()
   registerWindowIpc()
-  registerVehicleIpc()
-  registerDatabaseIpc()
-  startTcpServer()
+  registerAuthIpc()
+  registerEspIpc()
+  startEspSocketServer()
 
-  prisma.session.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1, name: 'Default Session', status: 'idle' }
-  }).catch(() => {})
+  try {
+    await seedDefaultAdmin()
+  } catch (err) {
+    console.error('Failed to seed admin:', err)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
