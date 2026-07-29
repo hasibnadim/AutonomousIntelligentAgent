@@ -1,0 +1,46 @@
+---
+description: Project architecture, stack, and domain for the door-access admin app
+alwaysApply: true
+---
+
+# User Admin — Door Access System
+
+Electron desktop admin for keypad users + ESP32 knock-pattern door access.
+
+## Stack
+
+- **Desktop:** Electron + electron-vite, React 19, Tailwind, React Router
+- **Data:** SQLite via Prisma (`prisma/schema.prisma`, `prisma/dev.db`)
+- **Package manager:** Bun (`bun run dev`, `bunx prisma …`)
+- **MCU:** PlatformIO ESP32 Arduino in `src/mcu/`
+
+## Layout
+
+| Path | Role |
+|------|------|
+| `src/main/` | Electron main: auth, users, biometric, ESP TCP `:9000`, window |
+| `src/preload/` | `contextBridge` → `window.api` only |
+| `src/renderer/` | Admin UI (Login, Dashboard, Users, Activity, Profile) |
+| `src/mcu/` | ESP32 keypad + piezo + LCD + servo firmware |
+| `prisma/` | Schema, seed, SQLite DB |
+
+## Business rules
+
+- **ADMIN** — username/email/password; logs into the desktop app. CRUD users, watch ESP/activity.
+- **USER** — keypad identity (`id` + `name` only). No desktop login. Knock pattern for door access.
+- `User.biometricPattern` null → ESP **SET** (enroll). Non-null → **GET** (verify).
+- Pattern = comma gap-ms string e.g. `320,890,410` — tempo-independent ratio match (~38% tol) in `biometric.ts`. Not bcrypt.
+- Activity: log LOOKUP / SET / GET with SUCCESS | FAIL | NOT_FOUND.
+- Network edge: **TCP :9000 only** (colon protocol). Admin CRUD is Electron IPC — no REST API.
+
+## Defaults
+
+- Seed admin: `admin` / `admin123`
+- MCU WiFi/server: set in `src/mcu/src/main.cpp` (hotspot + host IP)
+
+## Do / don't
+
+- Prefer IPC + preload over exposing Node in renderer.
+- Keep ESP messages newline + `:` fields — never JSON on the wire.
+- After pattern format changes, users need **Reset Bio** + re-enroll.
+- Stop `bun dev` / serial monitor before `prisma generate` or `pio upload` if Windows locks the file/COM port.

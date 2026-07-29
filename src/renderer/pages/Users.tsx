@@ -3,6 +3,7 @@ import type { User } from '../types'
 import { useAuth } from '../AuthContext'
 
 const emptyForm = {
+  userId: '',
   username: '',
   email: '',
   name: '',
@@ -46,6 +47,7 @@ export default function Users() {
   const startEdit = (u: User) => {
     setEditingId(u.id)
     setForm({
+      userId: String(u.id),
       username: u.username || '',
       email: u.email || '',
       name: u.name,
@@ -72,10 +74,16 @@ export default function Users() {
     setBusy(true)
     setError('')
     try {
+      const parsedUserId = form.userId.trim() ? Number(form.userId.trim()) : undefined
+      if (form.userId.trim() && (!Number.isInteger(parsedUserId) || (parsedUserId ?? 0) <= 0)) {
+        throw new Error('User ID must be a positive integer')
+      }
+
       if (editingId == null) {
         await window.api.users.create(
           isAdminTab
             ? {
+                userId: parsedUserId,
                 username: form.username,
                 email: form.email,
                 name: form.name,
@@ -83,6 +91,7 @@ export default function Users() {
                 role: 'ADMIN'
               }
             : {
+                userId: parsedUserId,
                 name: form.name,
                 role: 'USER'
               }
@@ -90,6 +99,7 @@ export default function Users() {
       } else if (isAdminTab) {
         await window.api.users.update({
           id: editingId,
+          userId: parsedUserId,
           username: form.username,
           email: form.email,
           name: form.name,
@@ -99,6 +109,7 @@ export default function Users() {
       } else {
         await window.api.users.update({
           id: editingId,
+          userId: parsedUserId,
           name: form.name,
           role: 'USER'
         })
@@ -197,7 +208,27 @@ export default function Users() {
           )}
         </p>
 
-        <label className="block space-y-1 md:col-span-2">
+        <label className="block space-y-1">
+          <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: 'var(--accent-text-dim)' }}>
+            User ID {isAdminTab ? '(optional)' : '(keypad id)'}
+          </span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={form.userId}
+            onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
+            placeholder={editingId == null ? 'auto' : String(editingId)}
+            className="w-full px-3 py-2 text-sm outline-none"
+            style={{
+              background: 'var(--bg)',
+              border: '1px solid var(--accent-border-med)',
+              color: 'var(--text)'
+            }}
+          />
+        </label>
+
+        <label className="block space-y-1">
           <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: 'var(--accent-text-dim)' }}>
             Name
           </span>

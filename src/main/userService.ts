@@ -67,6 +67,8 @@ export async function getUser(id: number): Promise<PublicUser> {
 }
 
 export async function createUser(data: {
+  id?: number
+  userId?: number
   username?: string
   email?: string
   password?: string
@@ -75,11 +77,21 @@ export async function createUser(data: {
 }): Promise<PublicUser> {
   const role = data.role === 'ADMIN' ? 'ADMIN' : 'USER'
   const name = data.name?.trim() ?? ''
+  const requestedId = data.userId ?? data.id
+
+  let customId: number | undefined
+  if (requestedId !== undefined && requestedId !== null && String(requestedId) !== '') {
+    customId = Number(requestedId)
+    if (!Number.isInteger(customId) || customId <= 0) throw new Error('User ID must be a positive integer')
+    const taken = await prisma.user.findUnique({ where: { id: customId } })
+    if (taken) throw new Error('User ID already exists')
+  }
 
   if (role === 'USER') {
     if (!name) throw new Error('Name is required for users')
     const user = await prisma.user.create({
       data: {
+        ...(customId !== undefined ? { id: customId } : {}),
         name,
         role: 'USER',
         username: null,
@@ -88,6 +100,7 @@ export async function createUser(data: {
         biometricPattern: null
       }
     })
+    if (customId !== undefined) await syncUserIdSequence()
     return toPublicUser(user)
   }
 
@@ -107,15 +120,34 @@ export async function createUser(data: {
 
   const passwordHash = await bcrypt.hash(password, 10)
   const user = await prisma.user.create({
-    data: { username, email, name: name || username, role: 'ADMIN', passwordHash }
+    data: {
+      ...(customId !== undefined ? { id: customId } : {}),
+      username,
+      email,
+      name: name || username,
+      role: 'ADMIN',
+      passwordHash
+    }
   })
+  if (customId !== undefined) await syncUserIdSequence()
   return toPublicUser(user)
+}
+
+async function syncUserIdSequence() {
+  try {
+    await prisma.$executeRawUnsafe(
+      `UPDATE sqlite_sequence SET seq = (SELECT MAX(id) FROM User) WHERE name = 'User'`
+    )
+  } catch {
+    // sqlite_sequence may not exist until first autoincrement insert
+  }
 }
 
 export async function updateUser(
   actor: PublicUser,
   data: {
     id: number
+    userId?: number
     username?: string
     email?: string
     name?: string
@@ -134,13 +166,26 @@ export async function updateUser(
 
   if (data.role !== undefined && !isAdmin) throw new Error('Only admins can change roles')
 
+  let nextId = target.id
+  if (data.userId !== undefined && data.userId !== null && String(data.userId) !== '') {
+    nextId = Number(data.userId)
+    if (!Number.isInteger(nextId) || nextId <= 0) throw new Error('User ID must be a positive integer')
+    if (nextId !== target.id) {
+      const taken = await prisma.user.findUnique({ where: { id: nextId } })
+      if (taken) throw new Error('User ID already exists')
+    }
+  }
+
   const update: {
+    id?: number
     username?: string | null
     email?: string | null
     name?: string
     role?: string
     passwordHash?: string | null
   } = {}
+
+  if (nextId !== target.id) update.id = nextId
 
   if (data.name !== undefined) {
     const name = data.name.trim()
@@ -171,17 +216,22 @@ export async function updateUser(
 
   try {
     const user = await prisma.user.update({ where: { id: data.id }, data: update })
+    if (update.id !== undefined) await syncUserIdSequence()
     const publicUser = toPublicUser(user)
 
     for (const [token, sessionUser] of sessions.entries()) {
-      if (sessionUser.id === publicUser.id) {
+      if (sessionUser.id === data.id || sessionUser.id === publicUser.id) {
         if (publicUser.role !== 'ADMIN') sessions.delete(token)
         else sessions.set(token, publicUser)
       }
     }
 
     return publicUser
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ''
+    if (message.includes('Unique constraint') || message.includes('UNIQUE')) {
+      throw new Error('User ID, username, or email already exists')
+    }
     throw new Error('Username or email already exists')
   }
 }

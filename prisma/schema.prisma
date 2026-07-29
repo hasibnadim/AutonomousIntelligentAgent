@@ -14,7 +14,18 @@ model User {
   passwordHash     String?  // required for ADMIN login only
   name             String   @default("")
   role             String   @default("USER") // ADMIN | USER
-  biometricPattern String?  // hashed keypad pattern; null => SET mode
+  /// Knock gap pattern in ms, e.g. "320,890,410,1200" — null => SET mode
+  biometricPattern String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  userName  String   @default("")
+  action    String   // LOOKUP | SET | GET
+  result    String   // SUCCESS | FAIL | NOT_FOUND | ...
+  detail    String   @default("")
+  createdAt DateTime @default(now())
 }

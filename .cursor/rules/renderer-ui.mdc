@@ -1,0 +1,25 @@
+---
+description: React renderer admin UI conventions
+globs: src/renderer/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Renderer (admin UI)
+
+## Structure
+
+- Pages: Login, Dashboard (ESP status/logs), Users (Users/Admins tabs), Activity, Profile.
+- Auth via `AuthContext`; theme via `ThemeContext`; custom `TitleBar` for frameless window.
+- Use `window.api` only — no direct Prisma/Node/net.
+
+## UX rules
+
+- Dashboard: live ESP connect indicator, hotspot host IPs, TCP traffic log.
+- Users: editable keypad `userId`, Reset Bio for re-enroll; ADMIN vs USER fields differ.
+- Activity: search + live `activity:onNew` stream for LOOKUP/SET/GET.
+
+## Patterns
+
+- Functional components + React Router.
+- Subscribe to `esp:onStatus` / `esp:onLog` / `activity:onNew` in `useEffect`; return unsubscribe cleanups from preload helpers.
+- Prefer Tailwind utility classes consistent with existing pages; keep military/door-access wording only on MCU LCD, not forced on admin UI.

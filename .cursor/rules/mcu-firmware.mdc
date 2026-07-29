@@ -1,0 +1,33 @@
+---
+description: ESP32 MCU firmware conventions (PlatformIO, enroll confirm, LCD)
+globs: src/mcu/**/*
+alwaysApply: false
+---
+
+# MCU firmware (`src/mcu`)
+
+PlatformIO board `esp32dev`. Entry: `src/mcu/src/main.cpp`.
+
+## Hardware flow
+
+Keypad ID → `#` → `LOOKUP` → enroll (SET) or verify (GET) knocks → servo door on success.
+
+## Enroll (SET)
+
+1. Capture primary pattern.
+2. Capture confirm pattern.
+3. Local `patternsConfirmMatch` (same rhythm idea as host).
+4. On match only: `SET:<id>:<gaps>`. On mismatch: abort, do not upload.
+
+## LCD
+
+- Short uppercase military tone (≤16 chars/line): `STANDBY`, `ENROLL COMPLETE`, `ACCESS DENIED`, etc.
+- Avoid casual phrasing (“Ready”, “Oops”).
+
+## Ops
+
+- Close serial monitor before `pio run -t upload` (COM port lock on Windows).
+- WiFi SSID/password and `SERVER_HOST` live as constants in `main.cpp`.
+- Keep knock tuning constants (`KNOCK_*`) centralized; timer starts after first accepted knock.
+- Tap input: two wires GPIO32↔GND. 100ms merge window; 3s idle ends pattern. Gaps = ms between taps.
+- Flow helpers: `runEnroll` / `runVerify` / `captureTaps` — keep military LCD ≤16 chars.

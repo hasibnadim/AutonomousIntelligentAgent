@@ -12,6 +12,7 @@ import {
   resetBiometric,
   updateUser
 } from './userService'
+import { listActivity } from './biometric'
 
 let ipcToken: string | null = null
 
@@ -41,7 +42,15 @@ export function registerAuthIpc() {
     'users:create',
     async (
       _event,
-      data: { username?: string; email?: string; password?: string; name?: string; role?: string }
+      data: {
+        id?: number
+        userId?: number
+        username?: string
+        email?: string
+        password?: string
+        name?: string
+        role?: string
+      }
     ) => {
       requireAdmin(ipcToken)
       return createUser(data)
@@ -54,6 +63,7 @@ export function registerAuthIpc() {
       _event,
       data: {
         id: number
+        userId?: number
         username?: string
         email?: string
         name?: string
@@ -79,5 +89,10 @@ export function registerAuthIpc() {
   ipcMain.handle('users:resetBiometric', async (_event, id: number) => {
     requireAdmin(ipcToken)
     return resetBiometric(id)
+  })
+
+  ipcMain.handle('activity:list', async (_event, search?: string) => {
+    requireAdmin(ipcToken)
+    return listActivity(search ?? '')
   })
 }

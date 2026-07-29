@@ -15,12 +15,9 @@ export function createWindow() {
     minHeight: 600,
     title: 'User Admin',
     backgroundColor: '#1a1a1a',
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#1a1a1a',
-      symbolColor: '#d4d4d4',
-      height: 40
-    },
+    // Fully custom TitleBar — do NOT enable titleBarOverlay (it steals clicks
+    // on Windows and can make inputs under the top chrome unfocusable).
+    frame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -57,13 +54,7 @@ export function registerWindowIpc() {
   ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized() ?? false)
 
   ipcMain.handle('window:setTheme', (_event, theme: string) => {
-    const isLight = theme === 'light'
-    if (mainWindow) {
-      mainWindow.setTitleBarOverlay?.({
-        color: isLight ? '#e8ecf0' : '#060a14',
-        symbolColor: isLight ? '#607080' : 'rgba(0,240,255,0.5)',
-        height: 40
-      })
-    }
+    // Theme is applied in the renderer; frameless window has no native overlay to tint.
+    void theme
   })
 }

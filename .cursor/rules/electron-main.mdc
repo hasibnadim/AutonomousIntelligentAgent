@@ -1,0 +1,29 @@
+---
+description: Electron main-process conventions (IPC, Prisma, auth)
+globs: src/main/**/*.ts,src/preload/**/*.ts
+alwaysApply: false
+---
+
+# Electron main / preload
+
+## Boundaries
+
+- DB and secrets stay in **main** (`database.ts`, `auth.ts`, `userService.ts`).
+- Renderer talks only through `window.api` from `src/preload/index.ts`.
+- Add IPC: register `ipcMain.handle` in main → expose `ipcRenderer.invoke` in preload → type in renderer.
+
+## Auth & users
+
+- Login is ADMIN-only (`auth.ts`). USER rows have no password/username requirement.
+- `users:resetBiometric` clears `biometricPattern` so next LOOKUP returns SET.
+- Public user DTOs must not leak password hashes; patterns may be omitted from list UIs.
+
+## ESP + activity
+
+- Start TCP listener with the app; status/logs via `esp:*` IPC.
+- Every LOOKUP/SET/GET attempt should `logActivity` and push `activity:new`.
+
+## Prisma notes
+
+- SQLite URL often uses absolute `file:C:/…` under `app.getAppPath()/prisma/dev.db` on Windows.
+- If `prisma generate` hits EPERM, quit Electron first (query engine DLL lock).

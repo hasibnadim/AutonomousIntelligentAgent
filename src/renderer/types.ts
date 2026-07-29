@@ -13,6 +13,8 @@ export interface User {
 }
 
 export interface UserCreateInput {
+  id?: number
+  userId?: number
   username?: string
   email?: string
   password?: string
@@ -22,6 +24,7 @@ export interface UserCreateInput {
 
 export interface UserUpdateInput {
   id: number
+  userId?: number
   username?: string
   email?: string
   name?: string
@@ -35,6 +38,8 @@ export interface EspStatus {
   connected: boolean
   clientCount: number
   clients: string[]
+  hosts: { name: string; address: string; endpoint: string }[]
+  connectHint: string
 }
 
 export interface EspLogEntry {
@@ -43,6 +48,16 @@ export interface EspLogEntry {
   type: 'info' | 'rx' | 'tx' | 'error'
   remote: string
   message: string
+}
+
+export interface ActivityEntry {
+  id: number
+  userId: number | null
+  userName: string
+  action: string
+  result: string
+  detail: string
+  createdAt: string
 }
 
 declare global {
@@ -68,6 +83,10 @@ declare global {
         update: (data: UserUpdateInput) => Promise<User>
         delete: (id: number) => Promise<boolean>
         resetBiometric: (id: number) => Promise<User>
+      }
+      activity: {
+        list: (search?: string) => Promise<ActivityEntry[]>
+        onNew: (cb: (entry: ActivityEntry) => void) => () => void
       }
       esp: {
         getStatus: () => Promise<EspStatus>

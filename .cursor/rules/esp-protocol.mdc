@@ -1,0 +1,29 @@
+---
+description: ESP TCP colon protocol and biometric SET/GET business logic
+globs: src/main/espSocket.ts,src/main/biometric.ts,src/mcu/**/*
+alwaysApply: false
+---
+
+# ESP biometric protocol
+
+TCP server on **port 9000** (`espSocket.ts`). One line per message, fields separated by `:`.
+
+| Command | Request | Success reply |
+|---------|---------|---------------|
+| Lookup | `LOOKUP:<id>` | `LOOKUP:<id>:SET` or `LOOKUP:<id>:GET` |
+| Enroll | `SET:<id>:<gaps>` | `SET:<id>:OK` |
+| Verify | `GET:<id>:<gaps>` | `GET:<id>:1` or `GET:<id>:0` |
+| Error | — | `ERROR:<CODE>` (e.g. `NOT_FOUND`) |
+
+## Pattern format
+
+- Gaps in ms: `"320,890,410"` (≥3 gaps; typical 4 gaps ⇒ 5 knocks).
+- Match via `patternsMatch()` — mean-normalized ratios, `REL_TOLERANCE ≈ 0.38`.
+- Do not hash patterns; store raw gap string on `User.biometricPattern`.
+- MCU enroll: capture primary + confirm locally, upload `SET` only on match.
+
+## Host duties
+
+- Parse in `espSocket.ts`; business logic in `biometric.ts`.
+- Broadcast `esp:status` / `esp:log` and `activity:new` to renderer.
+- Never invent HTTP/JSON endpoints for ESP — TCP colon text only.

@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Users from './pages/Users'
 import Profile from './pages/Profile'
+import Activity from './pages/Activity'
 
 function Shell() {
   const { user, logout } = useAuth()
@@ -14,7 +15,10 @@ function Shell() {
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <TitleBar />
       <div className="flex flex-1 overflow-hidden">
-        <nav className="w-44 shrink-0 hud-nav flex flex-col pt-3 gap-0.5">
+        <nav
+          className="w-44 shrink-0 hud-nav flex flex-col pt-3 gap-0.5"
+          style={{ WebkitAppRegion: 'no-drag' as unknown as string }}
+        >
           <span className="px-4 pb-2 text-[9px] font-mono tracking-[4px] uppercase" style={{ color: 'var(--accent-text-dim)' }}>
             Menu
           </span>
@@ -43,6 +47,19 @@ function Shell() {
               Users
             </NavLink>
           )}
+          {isAdmin && (
+            <NavLink
+              to="/activity"
+              className="block w-full text-left px-4 py-2 text-xs font-mono tracking-wider uppercase transition-all duration-150 border-l-2"
+              style={({ isActive }) => ({
+                borderColor: isActive ? 'var(--accent)' : 'transparent',
+                color: isActive ? 'var(--accent)' : 'var(--accent-text-muted)',
+                background: isActive ? 'var(--accent-bg-tile)' : 'transparent'
+              })}
+            >
+              Activity
+            </NavLink>
+          )}
           <NavLink
             to="/profile"
             className="block w-full text-left px-4 py-2 text-xs font-mono tracking-wider uppercase transition-all duration-150 border-l-2"
@@ -69,10 +86,14 @@ function Shell() {
           </div>
         </nav>
 
-        <main className="flex-1 overflow-auto p-5">
+        <main
+          className="flex-1 overflow-auto p-5"
+          style={{ WebkitAppRegion: 'no-drag' as unknown as string }}
+        >
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/activity" element={<Activity />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

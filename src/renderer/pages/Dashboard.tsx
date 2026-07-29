@@ -8,7 +8,9 @@ const emptyStatus: EspStatus = {
   port: 9000,
   connected: false,
   clientCount: 0,
-  clients: []
+  clients: [],
+  hosts: [],
+  connectHint: '0.0.0.0:9000'
 }
 
 function logColor(type: EspLogEntry['type']) {
@@ -27,12 +29,21 @@ export default function Dashboard() {
   useEffect(() => {
     let alive = true
 
-    window.api.esp.getStatus().then((s) => {
-      if (alive) setStatus(s)
-    })
-    window.api.esp.getLogs().then((entries) => {
-      if (alive) setLogs(entries)
-    })
+    const refresh = () => {
+      window.api.esp.getStatus().then((s) => {
+        if (alive) setStatus(s)
+      })
+      window.api.esp.getLogs().then((entries) => {
+        if (alive) setLogs(entries)
+      })
+    }
+
+    refresh()
+    const timer = setInterval(() => {
+      window.api.esp.getStatus().then((s) => {
+        if (alive) setStatus(s)
+      })
+    }, 3000)
 
     const offStatus = window.api.esp.onStatus(setStatus)
     const offLog = window.api.esp.onLog((entry) => {
@@ -42,6 +53,7 @@ export default function Dashboard() {
 
     return () => {
       alive = false
+      clearInterval(timer)
       offStatus()
       offLog()
       offCleared()
@@ -134,9 +146,32 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {status.hosts.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-[10px] font-mono tracking-wider uppercase" style={{ color: 'var(--accent-text-dim)' }}>
+              ESP should connect to (host hotspot / LAN IP)
+            </p>
+            <p className="text-sm font-mono" style={{ color: 'var(--hud-green)' }}>
+              {status.connectHint}
+            </p>
+            <div className="space-y-0.5">
+              {status.hosts.map((h) => (
+                <p key={h.endpoint + h.name} className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>
+                  {h.endpoint}
+                  <span style={{ color: 'var(--accent-text-dim)' }}> · {h.name}</span>
+                </p>
+              ))}
+            </div>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              Join ESP32 to this PC&apos;s hotspot, then open a TCP client to the IP above on port {status.port}.
+              Allow Windows Firewall for private networks if it asks.
+            </p>
+          </div>
+        )}
+
         {status.clients.length > 0 && (
           <p className="text-[10px] font-mono" style={{ color: 'var(--accent-text-muted)' }}>
-            {status.clients.join(' · ')}
+            Clients: {status.clients.join(' · ')}
           </p>
         )}
 

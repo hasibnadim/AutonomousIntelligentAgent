@@ -21,6 +21,8 @@ const api = {
     list: () => ipcRenderer.invoke('users:list'),
     get: (id: number) => ipcRenderer.invoke('users:get', id),
     create: (data: {
+      id?: number
+      userId?: number
       username?: string
       email?: string
       password?: string
@@ -29,6 +31,7 @@ const api = {
     }) => ipcRenderer.invoke('users:create', data),
     update: (data: {
       id: number
+      userId?: number
       username?: string
       email?: string
       name?: string
@@ -37,6 +40,14 @@ const api = {
     }) => ipcRenderer.invoke('users:update', data),
     delete: (id: number) => ipcRenderer.invoke('users:delete', id),
     resetBiometric: (id: number) => ipcRenderer.invoke('users:resetBiometric', id)
+  },
+  activity: {
+    list: (search?: string) => ipcRenderer.invoke('activity:list', search),
+    onNew: (cb: (entry: any) => void) => {
+      const handler = (_event: any, entry: any) => cb(entry)
+      ipcRenderer.on('activity:new', handler)
+      return () => ipcRenderer.removeListener('activity:new', handler)
+    }
   },
   esp: {
     getStatus: () => ipcRenderer.invoke('esp:getStatus'),

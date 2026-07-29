@@ -1,4 +1,5 @@
 import net from 'net'
+import os from 'os'
 import { BrowserWindow, ipcMain } from 'electron'
 import { lookupBiometric, setBiometricPattern, verifyBiometricPattern } from './biometric'
 
@@ -13,6 +14,12 @@ export type EspLogEntry = {
   message: string
 }
 
+export type HostAddress = {
+  name: string
+  address: string
+  endpoint: string
+}
+
 type EspCommand =
   | { cmd: 'LOOKUP'; userId: number }
   | { cmd: 'SET'; userId: number; pattern: string }
@@ -22,6 +29,32 @@ const clients = new Set<net.Socket>()
 const logs: EspLogEntry[] = []
 let logSeq = 0
 let listening = false
+
+function listHostAddresses(): HostAddress[] {
+  const result: HostAddress[] = []
+  const ifaces = os.networkInterfaces()
+
+  for (const [name, entries] of Object.entries(ifaces)) {
+    if (!entries) continue
+    for (const entry of entries) {
+      if (entry.family !== 'IPv4' || entry.internal) continue
+      result.push({
+        name,
+        address: entry.address,
+        endpoint: `${entry.address}:${PORT}`
+      })
+    }
+  }
+
+  // Prefer Windows Mobile Hotspot / SoftAP style names first
+  result.sort((a, b) => {
+    const score = (n: string) =>
+      /local area connection\*|microsoft wi-fi|softap|hotspot|hosted/i.test(n) ? 0 : 1
+    return score(a.name) - score(b.name)
+  })
+
+  return result
+}
 
 function broadcast(channel: string, payload: unknown) {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -51,12 +84,16 @@ function emitStatus() {
 
 export function getEspStatus() {
   const remotes = [...clients].map((socket) => `${socket.remoteAddress}:${socket.remotePort}`)
+  const hosts = listHostAddresses()
   return {
     listening,
     port: PORT,
     connected: clients.size > 0,
     clientCount: clients.size,
-    clients: remotes
+    clients: remotes,
+    hosts,
+    // Best guess for ESP on PC hotspot
+    connectHint: hosts[0]?.endpoint ?? `0.0.0.0:${PORT}`
   }
 }
 
