@@ -6,9 +6,10 @@
  * Tap input: TTP223 capacitive touch on GPIO 32 (SIG).
  *   Module: VCC→3.3V, GND→GND, SIG→GPIO32
  *   Use momentary mode (not toggle). Default modules are active-HIGH on touch.
- * Exit button: GPIO 35 → open door, auto-close after delay.
- *   Wire: 10k pull-up 35→3.3V, button between 35 and GND (pressed = LOW).
- *   (GPIO 35 is input-only — no internal pull-up.)
+ * Exit button: GPIO 34 → open door, auto-close after delay.
+ *   Active LOW: 10k pull-up 34→3.3V, button/switch between 34 and GND.
+ *   Press or switch ON = LOW → open once; hold ignored until released/OFF.
+ *   (GPIO 34 is input-only — no internal pull-up.)
  * Alarm buzzer: GPIO 13 — danger tone 5s after 3 wrong verify patterns.
  * Pattern: millisecond gaps between touches, e.g. "320,890,410"
  *
@@ -32,7 +33,7 @@
 // Pins
 static const int SERVO_PIN    = 25;
 static const int TOUCH_PIN    = 32;  // TTP223 SIG (active HIGH while touched)
-static const int EXIT_BTN_PIN = 35;  // pushbutton → open door (active LOW)
+static const int EXIT_BTN_PIN = 34;  // pushbutton/switch → open door (active LOW)
 static const int BUZZER_PIN   = 26;  // short feedback beeps
 static const int ALARM_PIN    = 13;  // danger alarm after 3 failed verifies
 static const int LED_PIN      = 33;
@@ -55,12 +56,12 @@ static const unsigned DOOR_OPEN_MS         = 2000;
 static const unsigned DOOR_CLOSE_MS        = 2000;
 
 // Intrusion alarm (GPIO 13)
-static const int      MAX_FAIL_ATTEMPTS = 3;
+static const int      MAX_FAIL_ATTEMPTS = 2;
 static const unsigned ALARM_MS          = 5000;
 
 // Network
 static const char* WIFI_SSID      = "h00";
-static const char* WIFI_PASSWORD  = "1234nnoo";
+static const char* WIFI_PASSWORD  = "1234nnooo";
 static const char* SERVER_HOST    = "192.168.137.1";
 static const uint16_t SERVER_PORT = 9000;
 
@@ -332,23 +333,24 @@ static void openDoor(int id) {
 }
 
 /**
- * GPIO35 exit button: press → open door, then auto-close.
- * Active HIGH — wire button between 3.3V and GPIO35 with 10k pull-DOWN to GND.
- * (GPIO35 is input-only with no internal pull, so external resistor is needed.)
- * If no pull-down: a floating pin reads LOW at idle, HIGH when pressed via 3.3V.
+ * GPIO34 exit button/switch (active LOW): press or switch ON → open once.
+ * Hold / leave switch ON does not re-open. Release or switch OFF re-arms.
+ * Wire: 10k pull-up 34→3.3V, button/switch 34→GND.
  */
 static void pollExitButton() {
-  const bool pressed = (digitalRead(EXIT_BTN_PIN) == HIGH);
+  const bool down = (digitalRead(EXIT_BTN_PIN) == LOW);
 
-  if (!pressed) {
+  if (!down) {
+    // Released / switch OFF — ready for next press.
     exitBtnWasDown = false;
     return;
   }
 
+  // Still held — already handled this press/switch-on.
   if (exitBtnWasDown) return;
 
   delay(EXIT_BTN_DEBOUNCE_MS);
-  if (digitalRead(EXIT_BTN_PIN) != HIGH) return;
+  if (digitalRead(EXIT_BTN_PIN) != LOW) return;
 
   exitBtnWasDown = true;
   capturePending = false;
@@ -615,10 +617,10 @@ static void handleKey(char key) {
 static void initHardware() {
   // TTP223 drives SIG high/low itself — no pull-up (active HIGH on touch).
   pinMode(TOUCH_PIN, INPUT);
-  // GPIO35 is input-only (no internal pull). Active HIGH: idle=LOW, pressed=HIGH.
-  // Wire: 10k pull-down (35→GND), button between 35 and 3.3V.
+  // GPIO34 is input-only (no internal pull) — need external 10k to 3.3V.
+  // If already LOW at boot (switch ON / floating), treat as held — no auto-open.
   pinMode(EXIT_BTN_PIN, INPUT);
-  exitBtnWasDown = false;
+  exitBtnWasDown = (digitalRead(EXIT_BTN_PIN) == LOW);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   pinMode(BUZZER_PIN, OUTPUT);
